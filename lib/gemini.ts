@@ -7,7 +7,7 @@ export async function getSteveSpeech(text: string): Promise<{ data: string, mime
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) return null;
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
   try {
     const response = await ai.models.generateContent({

@@ -30,6 +30,22 @@ export default function ChatPage() {
   const [isTalkBackEnabled, setIsTalkBackEnabled] = useState(true);
   const [showQuickReplies, setShowQuickReplies] = useState(true);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<{ openRouter: boolean, gemini: boolean } | null>(null);
+
+  // Check API status on mount
+  useEffect(() => {
+    const checkApi = async () => {
+      // We can't check server-side keys directly from client, 
+      // but we can check if the env vars are at least defined in the build
+      const hasGemini = !!process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      // OpenRouter key is server-only, so we can't check it here easily without a server action
+      setApiStatus({ 
+        openRouter: true, // Assume true for now, we'll catch errors later
+        gemini: hasGemini 
+      });
+    };
+    checkApi();
+  }, []);
 
   const handleReplay = async (msgId: string, text: string) => {
     if (speakingMsgId === msgId) {
@@ -154,7 +170,10 @@ export default function ChatPage() {
         steveReply = await getSteveResponseAction(text, history, progress.explanationLanguage);
       } catch (aiError: any) {
         console.error("AI Error:", aiError);
-        steveReply = `I'm having a little trouble connecting to my brain right now (${aiError.message || "Network error"}). Can you try again in a moment?`;
+        const isConfigError = aiError.message?.includes("not configured") || aiError.message?.includes("invalid");
+        steveReply = isConfigError 
+          ? `⚠️ AI Configuration Error: ${aiError.message}. Please click the ⚙️ gear icon in the top-right corner, go to "Secrets", and add a valid NEXT_PUBLIC_GEMINI_API_KEY.`
+          : `I'm having a little trouble connecting to my brain right now (${aiError.message || "Network error"}). Can you try again in a moment?`;
       }
       
       setIsTyping(false);
@@ -337,6 +356,12 @@ export default function ChatPage() {
                   {isListening ? 'Listening...' : 'Online & Ready'}
                 </span>
               </div>
+              {apiStatus && !apiStatus.gemini && (
+                <div className="mt-1 flex items-center gap-1 text-[9px] text-amber-600 font-bold">
+                  <Sparkles size={10} />
+                  <span>Gemini Key Missing in Secrets</span>
+                </div>
+              )}
             </div>
           </div>
           
