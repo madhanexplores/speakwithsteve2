@@ -3,6 +3,54 @@
 import { getSteveSystemPrompt } from '@/lib/prompts';
 import { GoogleGenAI } from "@google/genai";
 
+export async function checkApiStatusAction() {
+  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  
+  return {
+    gemini: !!(geminiKey && geminiKey !== "" && geminiKey !== "YOUR_API_KEY"),
+    openRouter: !!(openRouterKey && openRouterKey !== "" && openRouterKey !== "YOUR_OPENROUTER_API_KEY")
+  };
+}
+
+export async function getSteveSpeechAction(text: string): Promise<{ data: string, mimeType: string } | null> {
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "" || apiKey === "YOUR_API_KEY") return null;
+
+  const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Say naturally: ${text}` }] }],
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Zephyr' },
+          },
+        },
+      },
+    });
+
+    const part = response.candidates?.[0]?.content?.parts?.[0];
+    if (part?.inlineData?.data && part?.inlineData?.mimeType) {
+      return {
+        data: part.inlineData.data,
+        mimeType: part.inlineData.mimeType
+      };
+    }
+    return null;
+  } catch (error: any) {
+    if (error.message?.includes("429") || error.status === "RESOURCE_EXHAUSTED") {
+      console.warn("Gemini TTS Quota exceeded");
+    } else {
+      console.error("Error generating speech:", error);
+    }
+    return null;
+  }
+}
+
 export async function getSteveResponseAction(message: string, history: { role: "user" | "model", parts: { text: string }[] }[], language: 'English' | 'Tamil' = 'English') {
   // Try OpenRouter first if a key is provided
   const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -55,10 +103,10 @@ export async function getSteveResponseAction(message: string, history: { role: "
 
   // Fallback to Gemini (built-in, no external key needed)
   console.log("Falling back to Gemini for response...");
-  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   
   if (!geminiKey || geminiKey === "" || geminiKey === "YOUR_API_KEY") {
-    throw new Error("AI Service is not configured. Please add your Gemini API Key in the Settings -> Secrets panel as NEXT_PUBLIC_GEMINI_API_KEY.");
+    throw new Error("AI Service is not configured. Please ensure NEXT_PUBLIC_GEMINI_API_KEY is set in your environment variables.");
   }
 
   const ai = new GoogleGenAI({ apiKey: geminiKey.trim() });
@@ -81,7 +129,7 @@ export async function getSteveResponseAction(message: string, history: { role: "
     // Handle specific Gemini error codes
     const errorMsg = error.message || "";
     if (errorMsg.includes("API key not valid") || errorMsg.includes("INVALID_ARGUMENT")) {
-      throw new Error("The Gemini API Key provided is invalid. Please get a new key from https://aistudio.google.com/app/apikey and update it in the Settings -> Secrets panel.");
+      throw new Error("The Gemini API Key provided is invalid. Please get a new key from https://aistudio.google.com/app/apikey and update your environment variables.");
     }
     
     throw new Error(`AI Service Error: ${errorMsg || "Unknown error"}`);

@@ -5,8 +5,7 @@ import Navbar from '@/components/Navbar';
 import SteveMascot from '@/components/SteveMascot';
 import { Send, Mic, MicOff, RotateCcw, User, Bot, Sparkles, LogIn, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getSteveSpeech } from '@/lib/gemini';
-import { getSteveResponseAction } from '@/app/actions/ai';
+import { getSteveResponseAction, getSteveSpeechAction, checkApiStatusAction } from '@/app/actions/ai';
 import { playSteveAudio, speakText } from '@/lib/audio';
 import { useProgress } from '@/hooks/useProgress';
 import { useAuth } from '@/components/FirebaseProvider';
@@ -35,14 +34,12 @@ export default function ChatPage() {
   // Check API status on mount
   useEffect(() => {
     const checkApi = async () => {
-      // We can't check server-side keys directly from client, 
-      // but we can check if the env vars are at least defined in the build
-      const hasGemini = !!process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      // OpenRouter key is server-only, so we can't check it here easily without a server action
-      setApiStatus({ 
-        openRouter: true, // Assume true for now, we'll catch errors later
-        gemini: hasGemini 
-      });
+      try {
+        const status = await checkApiStatusAction();
+        setApiStatus(status);
+      } catch (err) {
+        console.error("Failed to check API status:", err);
+      }
     };
     checkApi();
   }, []);
@@ -63,7 +60,7 @@ export default function ChatPage() {
 
     if (hasTamil) {
       try {
-        const audioData = await getSteveSpeech(text);
+        const audioData = await getSteveSpeechAction(text);
         if (audioData) {
           playSteveAudio(audioData);
         } else {
@@ -172,7 +169,7 @@ export default function ChatPage() {
         console.error("AI Error:", aiError);
         const isConfigError = aiError.message?.includes("not configured") || aiError.message?.includes("invalid");
         steveReply = isConfigError 
-          ? `⚠️ AI Configuration Error: ${aiError.message}. Please click the ⚙️ gear icon in the top-right corner, go to "Secrets", and add a valid NEXT_PUBLIC_GEMINI_API_KEY.`
+          ? `⚠️ AI Configuration Error: ${aiError.message}. Please check your environment variables (NEXT_PUBLIC_GEMINI_API_KEY).`
           : `I'm having a little trouble connecting to my brain right now (${aiError.message || "Network error"}). Can you try again in a moment?`;
       }
       
@@ -195,7 +192,7 @@ export default function ChatPage() {
       if (isTalkBackEnabled && steveReply && !steveReply.includes("connecting to my brain")) {
         const hasTamil = /[\u0B80-\u0BFF]/.test(steveReply);
         if (hasTamil) {
-          getSteveSpeech(steveReply).then(audioData => {
+          getSteveSpeechAction(steveReply).then(audioData => {
             if (audioData) playSteveAudio(audioData);
             else speakText(steveReply);
           }).catch(() => speakText(steveReply));
