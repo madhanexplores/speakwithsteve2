@@ -4,14 +4,19 @@ import { getSteveSystemPrompt } from '@/lib/prompts';
 
 export async function checkApiStatusAction() {
   // --- HARDCODED KEYS ---
-  const HARDCODED_OPENROUTER_KEY = "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";
+  const HARDCODED_OPENROUTER_KEY = "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";
 
-  const openRouterKey = process.env.OPENROUTER_API_KEY || HARDCODED_OPENROUTER_KEY;
+  let openRouterKey = HARDCODED_OPENROUTER_KEY;
+
+  // If hardcoded is empty or a placeholder, try environment variable
+  if (!openRouterKey || openRouterKey === "" || openRouterKey.includes("YOUR_") || openRouterKey.includes("placeholder")) {
+    openRouterKey = process.env.OPENROUTER_API_KEY || "";
+  }
 
   const hasOpenRouter = !!(openRouterKey &&
     openRouterKey !== "" &&
     openRouterKey !== "YOUR_OPENROUTER_API_KEY" &&
-    !openRouterKey.includes("sk-or-v1-...placeholder"));
+    !openRouterKey.includes("placeholder"));
 
   return {
     gemini: false,
@@ -26,12 +31,15 @@ export async function getSteveSpeechAction(text: string): Promise<{ data: string
 
 export async function getSteveResponseAction(message: string, history: { role: "user" | "model", parts: { text: string }[] }[], language: 'English' | 'Tamil' = 'English') {
   // --- HARDCODED KEYS ---
-  const HARDCODED_OPENROUTER_KEY = "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";
+  const HARDCODED_OPENROUTER_KEY = "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";
 
-  // Prioritize hardcoded key if it's set, otherwise use env var
-  const openRouterKey = (HARDCODED_OPENROUTER_KEY && HARDCODED_OPENROUTER_KEY !== "" && !HARDCODED_OPENROUTER_KEY.includes("placeholder"))
-    ? HARDCODED_OPENROUTER_KEY
-    : process.env.OPENROUTER_API_KEY;
+  // Prioritize hardcoded key if it's set and not a placeholder, otherwise use env var
+  let openRouterKey = HARDCODED_OPENROUTER_KEY;
+
+  // If hardcoded is empty or a placeholder, try environment variable
+  if (!openRouterKey || openRouterKey === "" || openRouterKey.includes("YOUR_") || openRouterKey.includes("placeholder")) {
+    openRouterKey = process.env.OPENROUTER_API_KEY || "";
+  }
 
   if (!openRouterKey || openRouterKey === "" || openRouterKey === "YOUR_OPENROUTER_API_KEY") {
     throw new Error("OpenRouter API key is missing. Please provide it in the file or as an environment variable.");
