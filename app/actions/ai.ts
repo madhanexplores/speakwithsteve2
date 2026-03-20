@@ -4,7 +4,7 @@ import { getSteveSystemPrompt } from '@/lib/prompts';
 
 export async function checkApiStatusAction() {
   // --- HARDCODED KEYS ---
-  const HARDCODED_OPENROUTER_KEY = "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"; 
+  const HARDCODED_OPENROUTER_KEY = "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";
   
   const openRouterKey = process.env.OPENROUTER_API_KEY || HARDCODED_OPENROUTER_KEY;
   
@@ -26,7 +26,7 @@ export async function getSteveSpeechAction(text: string): Promise<{ data: string
 
 export async function getSteveResponseAction(message: string, history: { role: "user" | "model", parts: { text: string }[] }[], language: 'English' | 'Tamil' = 'English') {
   // --- HARDCODED KEYS ---
-  const HARDCODED_OPENROUTER_KEY = "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"; 
+  const HARDCODED_OPENROUTER_KEY = "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";
   
   // Prioritize hardcoded key if it's set, otherwise use env var
   const openRouterKey = (HARDCODED_OPENROUTER_KEY && HARDCODED_OPENROUTER_KEY !== "" && !HARDCODED_OPENROUTER_KEY.includes("placeholder"))
