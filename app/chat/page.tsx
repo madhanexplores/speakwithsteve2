@@ -106,13 +106,7 @@ export default function ChatPage() {
   }, [messages, isTyping]);
 
   const clearChat = async () => {
-    if (!user) return;
     if (!confirm("Are you sure you want to clear the chat history?")) return;
-    
-    // In a real app we'd delete from Firestore, for now we'll just clear local state
-    // and let the user know. 
-    // Actually, let's just show a toast or something. 
-    // For this demo, we'll just clear the local messages.
     setMessages([]);
   };
 
@@ -132,24 +126,35 @@ export default function ChatPage() {
     lastSendTime.current = now;
 
     const text = (textOverride || input).trim();
-    if (!text || !user || isTyping) return;
+    if (!text || isTyping) return;
 
     // Clear input immediately to prevent double sends
     setInput('');
     setIsTyping(true);
 
     try {
-      const messagesRef = collection(db, 'users', user.uid, 'messages');
+      const messagesRef = user ? collection(db, 'users', user.uid, 'messages') : null;
       
       // Save user message
-      try {
-        await addDoc(messagesRef, {
+      if (user && messagesRef) {
+        try {
+          await addDoc(messagesRef, {
+            role: 'user',
+            text: text,
+            timestamp: serverTimestamp()
+          });
+        } catch (fsError) {
+          handleFirestoreError(fsError, OperationType.CREATE, `users/${user.uid}/messages`);
+        }
+      } else {
+        // Guest mode: add to local state
+        const guestMsg: Message = {
+          id: Date.now().toString(),
           role: 'user',
           text: text,
-          timestamp: serverTimestamp()
-        });
-      } catch (fsError) {
-        handleFirestoreError(fsError, OperationType.CREATE, `users/${user.uid}/messages`);
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, guestMsg]);
       }
 
       // Award XP and words
@@ -167,10 +172,12 @@ export default function ChatPage() {
         steveReply = await getSteveResponseAction(text, history, progress.explanationLanguage);
       } catch (aiError: any) {
         console.error("AI Error:", aiError);
-        const isConfigError = aiError.message?.includes("not configured") || aiError.message?.includes("invalid");
+        const errorMsg = aiError.message || "Unknown error";
+        const isConfigError = errorMsg.includes("invalid") || errorMsg.includes("Authentication Failed") || errorMsg.includes("not configured");
+        
         steveReply = isConfigError 
-          ? `⚠️ AI Configuration Error: ${aiError.message}. Please check your environment variables (NEXT_PUBLIC_GEMINI_API_KEY).`
-          : `I'm having a little trouble connecting to my brain right now (${aiError.message || "Network error"}). Can you try again in a moment?`;
+          ? `⚠️ AI Configuration Error: ${errorMsg}. Please check your API keys.`
+          : `I'm having a little trouble connecting to my brain right now (${errorMsg}). Can you try again in a moment?`;
       }
       
       setIsTyping(false);
@@ -178,14 +185,25 @@ export default function ChatPage() {
       const replyText = steveReply || "I'm sorry, I didn't catch that.";
       
       // Save to Firestore to show the message immediately
-      try {
-        await addDoc(messagesRef, {
+      if (user && messagesRef) {
+        try {
+          await addDoc(messagesRef, {
+            role: 'steve',
+            text: replyText,
+            timestamp: serverTimestamp()
+          });
+        } catch (fsError) {
+          handleFirestoreError(fsError, OperationType.CREATE, `users/${user.uid}/messages`);
+        }
+      } else {
+        // Guest mode: add to local state
+        const guestReply: Message = {
+          id: (Date.now() + 1).toString(),
           role: 'steve',
           text: replyText,
-          timestamp: serverTimestamp()
-        });
-      } catch (fsError) {
-        handleFirestoreError(fsError, OperationType.CREATE, `users/${user.uid}/messages`);
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, guestReply]);
       }
 
       // Speak in the background if enabled
@@ -306,29 +324,6 @@ export default function ChatPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col pt-16">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 max-w-md w-full text-center">
-            <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <SteveMascot className="w-16 h-16" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Ready to talk?</h2>
-            <p className="text-slate-600 mb-8">Sign in with your Google account to start practicing English with Steve and track your progress.</p>
-            <button 
-              onClick={login}
-              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-            >
-              <LogIn size={20} /> Sign in with Google
-            </button>
-          </div>
-        </div>
       </div>
     );
   }

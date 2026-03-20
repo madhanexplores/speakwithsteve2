@@ -51,7 +51,10 @@ export function useProgress() {
   }, [user]);
 
   const setLanguage = async (lang: 'English' | 'Tamil') => {
-    if (!user) return;
+    if (!user) {
+      setProgress(prev => ({ ...prev, explanationLanguage: lang }));
+      return;
+    }
     const userRef = doc(db, 'users', user.uid);
     try {
       await updateDoc(userRef, {
@@ -63,13 +66,21 @@ export function useProgress() {
   };
 
   const addXp = async (amount: number) => {
-    if (!user) return;
-    const userRef = doc(db, 'users', user.uid);
+    const newXp = progress.xp + amount;
+    const newLevel = LEVELS.slice().reverse().find(l => newXp >= l.minXp)?.name || "Beginner";
+
+    if (!user) {
+      setProgress(prev => ({ 
+        ...prev, 
+        xp: newXp,
+        level: newLevel,
+        lastActive: new Date()
+      }));
+      return;
+    }
     
+    const userRef = doc(db, 'users', user.uid);
     try {
-      const newXp = progress.xp + amount;
-      const newLevel = LEVELS.slice().reverse().find(l => newXp >= l.minXp)?.name || "Beginner";
-      
       await updateDoc(userRef, {
         xp: increment(amount),
         level: newLevel,
@@ -81,7 +92,10 @@ export function useProgress() {
   };
 
   const addSpeakingTime = async (minutes: number) => {
-    if (!user) return;
+    if (!user) {
+      setProgress(prev => ({ ...prev, speakingTime: prev.speakingTime + minutes }));
+      return;
+    }
     const userRef = doc(db, 'users', user.uid);
     try {
       await updateDoc(userRef, {
@@ -93,7 +107,10 @@ export function useProgress() {
   };
 
   const addWords = async (count: number) => {
-    if (!user) return;
+    if (!user) {
+      setProgress(prev => ({ ...prev, wordsLearned: prev.wordsLearned + count }));
+      return;
+    }
     const userRef = doc(db, 'users', user.uid);
     try {
       await updateDoc(userRef, {

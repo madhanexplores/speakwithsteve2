@@ -26,7 +26,15 @@ export default function GrammarPage() {
     Corrected sentence: [The corrected version]
     Explanation: [A short, simple explanation of the fix]`;
 
-    const response = await getSteveResponseAction(prompt, []) || "";
+    let response = "";
+    try {
+      response = await getSteveResponseAction(prompt, []) || "";
+    } catch (aiError: any) {
+      console.error("Grammar AI Error:", aiError);
+      const errorMsg = aiError.message || "Unknown error";
+      response = `Corrected sentence: I'm sorry, I'm having trouble connecting to my brain right now.
+      Explanation: ${errorMsg}. Please check your API keys or try again later.`;
+    }
     
     // Parse response
     const correctedMatch = response.match(/Corrected sentence:\s*(.*)/i);
