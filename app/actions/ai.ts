@@ -5,13 +5,13 @@ import { getSteveSystemPrompt } from '@/lib/prompts';
 export async function checkApiStatusAction() {
   // --- HARDCODED KEYS ---
   const HARDCODED_OPENROUTER_KEY = "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";
-  
+
   const openRouterKey = process.env.OPENROUTER_API_KEY || HARDCODED_OPENROUTER_KEY;
-  
-  const hasOpenRouter = !!(openRouterKey && 
-                           openRouterKey !== "" && 
-                           openRouterKey !== "YOUR_OPENROUTER_API_KEY" && 
-                           !openRouterKey.includes("sk-or-v1-...placeholder"));
+
+  const hasOpenRouter = !!(openRouterKey &&
+    openRouterKey !== "" &&
+    openRouterKey !== "YOUR_OPENROUTER_API_KEY" &&
+    !openRouterKey.includes("sk-or-v1-...placeholder"));
 
   return {
     gemini: false,
@@ -27,12 +27,12 @@ export async function getSteveSpeechAction(text: string): Promise<{ data: string
 export async function getSteveResponseAction(message: string, history: { role: "user" | "model", parts: { text: string }[] }[], language: 'English' | 'Tamil' = 'English') {
   // --- HARDCODED KEYS ---
   const HARDCODED_OPENROUTER_KEY = "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";
-  
+
   // Prioritize hardcoded key if it's set, otherwise use env var
   const openRouterKey = (HARDCODED_OPENROUTER_KEY && HARDCODED_OPENROUTER_KEY !== "" && !HARDCODED_OPENROUTER_KEY.includes("placeholder"))
     ? HARDCODED_OPENROUTER_KEY
     : process.env.OPENROUTER_API_KEY;
-  
+
   if (!openRouterKey || openRouterKey === "" || openRouterKey === "YOUR_OPENROUTER_API_KEY") {
     throw new Error("OpenRouter API key is missing. Please provide it in the file or as an environment variable.");
   }
@@ -71,7 +71,7 @@ export async function getSteveResponseAction(message: string, history: { role: "
       const errorData = await response.json().catch(() => ({}));
       const errorMsg = errorData.error?.message || "Unknown OpenRouter error";
       console.error(`OpenRouter error (${response.status}):`, errorMsg);
-      
+
       if (response.status === 401) {
         throw new Error(`OpenRouter Authentication Failed: ${errorMsg}. Please check if your API key is active and has credits.`);
       }
