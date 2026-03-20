@@ -4,8 +4,12 @@ import { getSteveSystemPrompt } from '@/lib/prompts';
 import { GoogleGenAI } from "@google/genai";
 
 export async function checkApiStatusAction() {
-  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  // --- HARDCODED KEYS (Optional fallback for Vercel/Local) ---
+  const HARDCODED_GEMINI_KEY = ""; // Paste your Gemini key here if env vars aren't working
+  const HARDCODED_OPENROUTER_KEY = "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"; // Paste your OpenRouter key here
+  
+  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || HARDCODED_GEMINI_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY || HARDCODED_OPENROUTER_KEY;
   
   return {
     gemini: !!(geminiKey && geminiKey !== "" && geminiKey !== "YOUR_API_KEY"),
@@ -14,7 +18,8 @@ export async function checkApiStatusAction() {
 }
 
 export async function getSteveSpeechAction(text: string): Promise<{ data: string, mimeType: string } | null> {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const HARDCODED_GEMINI_KEY = ""; // Paste your Gemini key here
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || HARDCODED_GEMINI_KEY;
   if (!apiKey || apiKey === "" || apiKey === "YOUR_API_KEY") return null;
 
   const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
@@ -52,8 +57,12 @@ export async function getSteveSpeechAction(text: string): Promise<{ data: string
 }
 
 export async function getSteveResponseAction(message: string, history: { role: "user" | "model", parts: { text: string }[] }[], language: 'English' | 'Tamil' = 'English') {
+  // --- HARDCODED KEYS ---
+  const HARDCODED_GEMINI_KEY = ""; // Paste your Gemini key here
+  const HARDCODED_OPENROUTER_KEY = ""; // Paste your OpenRouter key here
+  
   // Try OpenRouter first if a key is provided
-  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY || HARDCODED_OPENROUTER_KEY;
   
   if (openRouterKey && openRouterKey !== "" && openRouterKey !== "YOUR_OPENROUTER_API_KEY" && openRouterKey !== "sk-or-v1-...") {
     try {
@@ -103,7 +112,7 @@ export async function getSteveResponseAction(message: string, history: { role: "
 
   // Fallback to Gemini (built-in, no external key needed)
   console.log("Falling back to Gemini for response...");
-  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const geminiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || HARDCODED_GEMINI_KEY;
   
   if (!geminiKey || geminiKey === "" || geminiKey === "YOUR_API_KEY") {
     throw new Error("AI Service is not configured. Please ensure NEXT_PUBLIC_GEMINI_API_KEY is set in your environment variables.");
